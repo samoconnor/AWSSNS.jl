@@ -2,6 +2,8 @@
 
 AWS SNS Interface for Julia
 
+[![Build Status](https://travis-ci.org/samoconnor/AWSSNS.jl.svg)](https://travis-ci.org/samoconnor/AWSSNS.jl)
+
 ```julia
 using AWSSNS
 using AWSSQS
