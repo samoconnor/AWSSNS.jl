@@ -11,7 +11,7 @@ module AWSSNS
 
 __precompile__()
 
-export sns_delete_topic, sns_create_topic, sns_subscribe_sqs,
+export sns_list_topics, sns_delete_topic, sns_create_topic, sns_subscribe_sqs,
        sns_subscribe_email, sns_publish
 
 
@@ -37,6 +37,11 @@ function sns(aws, action, topic; args...)
                    "TopicArn" => sns_arn(aws, topic)))
 end
 
+
+function sns_list_topics(aws) 
+    r = sns(aws, Dict("Action" => "ListTopics"))
+    [split(t["TopicArn"],":")[6] for t in r["Topics"]]
+end
 
 function sns_create_topic(aws, topic_name) 
 

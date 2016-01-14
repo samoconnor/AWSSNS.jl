@@ -25,6 +25,14 @@ aws = AWSCore.aws_config(region="ap-southeast-2")
 # SNS tests
 #-------------------------------------------------------------------------------
 
+
+for t in sns_list_topics(aws)
+    if ismatch(r"^ocaws-jl-test-topic", t)
+        sns_delete_topic(aws, t)
+    end
+end
+
+
 test_queue = "ocaws-jl-test-queue-" * lowercase(Dates.format(now(Dates.UTC),
                                                              "yyyymmddTHHMMSSZ"))
 
@@ -50,6 +58,9 @@ catch e
     @retry if true end
 end
 
+
+sqs_delete_queue(qa)
+sns_delete_topic(aws, test_topic)
 
 
 #==============================================================================#
