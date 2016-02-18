@@ -12,7 +12,7 @@ module AWSSNS
 __precompile__()
 
 export sns_list_topics, sns_delete_topic, sns_create_topic, sns_subscribe_sqs,
-       sns_subscribe_email, sns_publish
+       sns_subscribe_email, sns_subscribe_lambda, sns_publish
 
 
 using AWSCore
@@ -108,9 +108,23 @@ end
 
 function sns_subscribe_email(aws, topic_name, email)
 
-    sns(aws, topic_name, "Subscribe", Endpoint = email, Protocol = "email")
+    sns(aws, "Subscribe", topic_name, Endpoint = email, Protocol = "email")
 end
 
+
+import AWSLambda: lambda
+
+function sns_subscribe_lambda(aws, topic_name, lambda_name)
+
+    lambda_arn = arn(aws, "lambda", "function:$lambda_name")
+    sns(aws, "Subscribe", topic_name, Endpoint = lambda_arn, Protocol = "lambda")
+
+    lambda(aws, "POST"; path="$lambda_name/policy", query=Dict(
+           "Action" => "lambda:InvokeFunction",
+           "Principal" => "sns.amazonaws.com",
+           "SourceArn" => sns_arn(aws, topic_name),
+           "StatementId" => "sns_$topic_name"))
+end
 
 
 end # module AWSSNS
