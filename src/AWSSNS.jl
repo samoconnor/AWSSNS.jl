@@ -7,9 +7,10 @@
 #==============================================================================#
 
 
-module AWSSNS
-
 __precompile__()
+
+
+module AWSSNS
 
 export sns_list_topics, sns_delete_topic, sns_create_topic, sns_subscribe_sqs,
        sns_subscribe_email, sns_subscribe_lambda, sns_publish
