@@ -13,11 +13,13 @@ __precompile__()
 module AWSSNS
 
 export sns_list_topics, sns_delete_topic, sns_create_topic, sns_subscribe_sqs,
-       sns_subscribe_email, sns_subscribe_lambda, sns_publish
+       sns_subscribe_email, sns_subscribe_lambda, sns_publish,
+       sns_list_subscriptsion, sns_unsubscribe
 
 
 using AWSCore
 using SymDict
+using Retry
 
 
 
@@ -39,12 +41,13 @@ function sns(aws, action, topic; args...)
 end
 
 
-function sns_list_topics(aws) 
+function sns_list_topics(aws)
     r = sns(aws, Dict("Action" => "ListTopics"))
     [split(t["TopicArn"],":")[6] for t in r["Topics"]]
 end
 
-function sns_create_topic(aws, topic_name) 
+
+function sns_create_topic(aws, topic_name)
 
     sns(aws, "CreateTopic", topic_name)
 end
@@ -64,25 +67,26 @@ function sns_publish(aws, topic_name, message, subject="No Subject")
     sns(aws, "Publish", topic_name, Message = message, Subject = subject)
 end
 
-import AWSSQS: sqs_arn, sqs
+import AWSSQS: sqs, sqs_get_queue
 
-function sns_subscribe_sqs(aws, topic_name, queue; raw=flase)
+function sns_subscribe_sqs(aws, topic_name, queue; raw=false)
 
     r = sns(aws, Dict("Action" => "Subscribe",
                       "Name" => topic_name,
                       "TopicArn" => sns_arn(aws, topic_name),
-                      "Endpoint" => sqs_arn(queue),
+                      "Endpoint" => arn(aws, "sqs", queue),
                       "Protocol" => "sqs"))
 
     if raw
-        arn = r["SubscriptionArn"]
         sns(aws, "SetSubscriptionAttributes", topic_name,
-                  SubscriptionArn = arn,
+                  SubscriptionArn = r["SubscriptionArn"],
                   AttributeName = "RawMessageDelivery",
                   AttributeValue = "true")
     end
 
-    sqs(queue, Dict(
+    q = sqs_get_queue(aws, queue)
+
+    sqs(q, Dict(
         "Action" => "SetQueueAttributes",
         "Attribute.Name" => "Policy",
         "Attribute.Value" => """{
@@ -94,7 +98,7 @@ function sns_subscribe_sqs(aws, topic_name, queue; raw=flase)
                 "AWS": "*"
               },
               "Action": "SQS:SendMessage",
-              "Resource": "$(sqs_arn(queue))",
+              "Resource": "$(arn(aws, "sqs", queue))",
               "Condition": {
                 "ArnEquals": {
                   "aws:SourceArn": "$(sns_arn(aws, topic_name))"
@@ -117,14 +121,51 @@ import AWSLambda: lambda
 
 function sns_subscribe_lambda(aws, topic_name, lambda_name)
 
-    lambda_arn = arn(aws, "lambda", "function:$lambda_name")
+
+    if ismatch(r"^arn", lambda_name)
+        lambda_arn = lambda_name
+        lambda_name = split(lambda_arn, ":")[7]
+        laws = copy(aws)
+        laws[:region] = arn_region(lambda_arn)
+    else
+        lambda_arn = arn(aws, "lambda", "function:$lambda_name")
+        laws = aws
+    end
+
     sns(aws, "Subscribe", topic_name, Endpoint = lambda_arn, Protocol = "lambda")
 
-    lambda(aws, "POST"; path="$lambda_name/policy", query=Dict(
-           "Action" => "lambda:InvokeFunction",
-           "Principal" => "sns.amazonaws.com",
-           "SourceArn" => sns_arn(aws, topic_name),
-           "StatementId" => "sns_$topic_name"))
+    @protected try
+
+        lambda(laws, "POST"; path="$lambda_name/policy", query=Dict(
+               "Action" => "lambda:InvokeFunction",
+               "Principal" => "sns.amazonaws.com",
+               "SourceArn" => sns_arn(aws, topic_name),
+               "StatementId" => "sns_$topic_name"))
+    catch e
+        @ignore if e.code == "409" end
+    end
+end
+
+
+function sns_list_subscriptsion(aws, topic_name)
+    r = sns(aws, "ListSubscriptionsByTopic", topic_name)
+    r["Subscriptions"]
+end
+
+
+function sns_unsubscribe(aws, topic_name, SubscriptionArn)
+
+    sns(aws, "Unsubscribe", topic_name, SubscriptionArn = SubscriptionArn)
+end
+
+
+function sns_unsubscribe(aws, topic_name, pattern::Regex)
+
+    for s in sns_list_subscriptsion(aws, topic_name)
+        if ismatch(pattern, s["Endpoint"])
+            sns_unsubscribe(aws, topic_name, s["SubscriptionArn"])
+        end
+    end
 end
 
 
