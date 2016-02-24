@@ -67,8 +67,6 @@ function sns_publish(aws, topic_name, message, subject="No Subject")
     sns(aws, "Publish", topic_name, Message = message, Subject = subject)
 end
 
-import AWSSQS: sqs, sqs_get_queue
-
 function sns_subscribe_sqs(aws, topic_name, queue; raw=false)
 
     r = sns(aws, Dict("Action" => "Subscribe",
@@ -83,6 +81,12 @@ function sns_subscribe_sqs(aws, topic_name, queue; raw=false)
                   AttributeName = "RawMessageDelivery",
                   AttributeValue = "true")
     end
+
+#=
+    import AWSSQS: sqs, sqs_get_queue
+
+    This is probably a bad idea.
+    It might wipe out a policy already attached to the queue
 
     q = sqs_get_queue(aws, queue)
 
@@ -108,6 +112,7 @@ function sns_subscribe_sqs(aws, topic_name, queue; raw=false)
           ]
         }"""
     ))
+=#
 end
 
 
