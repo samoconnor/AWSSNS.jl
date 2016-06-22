@@ -139,6 +139,9 @@ function sns_subscribe_lambda(aws, topic_name, lambda_name)
 
     sns(aws, "Subscribe", topic_name, Endpoint = lambda_arn, Protocol = "lambda")
 
+# FIXME does not scale. End up with:
+#   ERROR: LoadError: 400 -- The final policy size is bigger than the limit.
+#=
     @protected try
 
         lambda(laws, "POST"; path="$lambda_name/policy", query=Dict(
@@ -149,6 +152,7 @@ function sns_subscribe_lambda(aws, topic_name, lambda_name)
     catch e
         @ignore if e.code == "409" end
     end
+=#
 end
 
 
