@@ -38,13 +38,28 @@ test_queue = "ocaws-jl-test-queue-" * lowercase(Dates.format(now(Dates.UTC),
 
 qa = sqs_create_queue(aws, test_queue)
 
+sqs_set_policy(qa, """{
+      "Version": "2008-10-17",
+      "Id": "test_policy",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "AWS": "*"
+          },
+          "Action": "sqs:SendMessage",
+          "Resource": "$(sqs_arn(qa))"
+        }
+      ]
+    }""")
+
 
 test_topic = "ocaws-jl-test-topic-" * lowercase(Dates.format(now(Dates.UTC),
                                                              "yyyymmddTHHMMSSZ"))
 
 sns_create_topic(aws, test_topic)
 
-sns_subscribe_sqs(aws, test_topic, qa; raw = true)
+sns_subscribe_sqs(aws, test_topic, test_queue; raw = true)
 
 sns_publish(aws, test_topic, "Hello SNS!")
 

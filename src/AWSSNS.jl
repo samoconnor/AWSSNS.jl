@@ -23,16 +23,16 @@ using Retry
 
 
 
-sns_arn(aws, topic_name) = arn(aws, "sns", topic_name)
+sns_arn(aws::AWSConfig, topic_name) = arn(aws, "sns", topic_name)
 
 
-function sns(aws, query)
+function sns(aws::AWSConfig, query)
     query["ContentType"] = "JSON"
     do_request(post_request(aws, "sns", "2010-03-31", query))
 end
 
 
-function sns(aws, action, topic; args...)
+function sns(aws::AWSConfig, action, topic; args...)
 
     sns(aws, merge(StringDict(args),
                    "Action" => action,
@@ -41,25 +41,23 @@ function sns(aws, action, topic; args...)
 end
 
 
-function sns_list_topics(aws)
+function sns_list_topics(aws::AWSConfig)
     r = sns(aws, Dict("Action" => "ListTopics"))
     [split(t["TopicArn"],":")[6] for t in r["Topics"]]
 end
 
 
-function sns_create_topic(aws, topic_name)
-
+function sns_create_topic(aws::AWSConfig, topic_name)
     sns(aws, "CreateTopic", topic_name)
 end
 
 
-function sns_delete_topic(aws, topic_name)
-
+function sns_delete_topic(aws::AWSConfig, topic_name)
     sns(aws, "DeleteTopic", topic_name)
 end
 
 
-function sns_publish(aws, topic_name, message, subject="No Subject")
+function sns_publish(aws::AWSConfig, topic_name, message, subject="No Subject")
 
     if length(subject) > 100
         subject = subject[1:100]
@@ -67,7 +65,7 @@ function sns_publish(aws, topic_name, message, subject="No Subject")
     sns(aws, "Publish", topic_name, Message = message, Subject = subject)
 end
 
-function sns_subscribe_sqs(aws, topic_name, queue; raw=false)
+function sns_subscribe_sqs(aws::AWSConfig, topic_name, queue; raw=false)
 
     r = sns(aws, Dict("Action" => "Subscribe",
                       "Name" => topic_name,
@@ -116,7 +114,7 @@ function sns_subscribe_sqs(aws, topic_name, queue; raw=false)
 end
 
 
-function sns_subscribe_email(aws, topic_name, email)
+function sns_subscribe_email(aws::AWSConfig, topic_name, email)
 
     sns(aws, "Subscribe", topic_name, Endpoint = email, Protocol = "email")
 end
@@ -124,7 +122,7 @@ end
 
 import AWSLambda: lambda
 
-function sns_subscribe_lambda(aws, topic_name, lambda_name)
+function sns_subscribe_lambda(aws::AWSConfig, topic_name, lambda_name)
 
 
     if ismatch(r"^arn", lambda_name)
@@ -156,19 +154,19 @@ function sns_subscribe_lambda(aws, topic_name, lambda_name)
 end
 
 
-function sns_list_subscriptsion(aws, topic_name)
+function sns_list_subscriptsion(aws::AWSConfig, topic_name)
     r = sns(aws, "ListSubscriptionsByTopic", topic_name)
     r["Subscriptions"]
 end
 
 
-function sns_unsubscribe(aws, topic_name, SubscriptionArn)
+function sns_unsubscribe(aws::AWSConfig, topic_name, SubscriptionArn)
 
     sns(aws, "Unsubscribe", topic_name, SubscriptionArn = SubscriptionArn)
 end
 
 
-function sns_unsubscribe(aws, topic_name, pattern::Regex)
+function sns_unsubscribe(aws::AWSConfig, topic_name, pattern::Regex)
 
     for s in sns_list_subscriptsion(aws, topic_name)
         if ismatch(pattern, s["Endpoint"])
