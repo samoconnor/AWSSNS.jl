@@ -42,8 +42,22 @@ end
 
 
 function sns_list_topics(aws::AWSConfig)
-    r = sns(aws, Dict("Action" => "ListTopics"))
-    [split(t["TopicArn"],":")[6] for t in r["Topics"]]
+    l = String[]
+    while true
+        if isempty(l)
+            r = sns(aws, Dict("Action" => "ListTopics"))
+        else
+            r = sns(aws, Dict("Action" => "ListTopics",
+                              "NextToken" => r["NextToken"]))
+        end
+        for t in r["Topics"]
+            push!(l, String(split(t["TopicArn"],":")[6]))
+        end
+        if !haskey(r, "NextToken") || r["NextToken"] == nothing
+            break
+        end
+    end
+    return l
 end
 
 
@@ -127,12 +141,8 @@ function sns_subscribe_lambda(aws::AWSConfig, topic_name, lambda_name)
 
     if ismatch(r"^arn", lambda_name)
         lambda_arn = lambda_name
-        lambda_name = split(lambda_arn, ":")[7]
-        laws = copy(aws)
-        laws[:region] = arn_region(lambda_arn)
     else
         lambda_arn = arn(aws, "lambda", "function:$lambda_name")
-        laws = aws
     end
 
     sns(aws, "Subscribe", topic_name, Endpoint = lambda_arn, Protocol = "lambda")
