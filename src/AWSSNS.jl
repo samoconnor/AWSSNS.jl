@@ -14,7 +14,7 @@ module AWSSNS
 
 export sns_list_topics, sns_delete_topic, sns_create_topic, sns_subscribe_sqs,
        sns_subscribe_email, sns_subscribe_lambda, sns_publish,
-       sns_list_subscriptsion, sns_unsubscribe
+       sns_list_subscriptsion, sns_unsubscribe, send_sms
 
 
 using AWSCore
@@ -34,10 +34,10 @@ end
 
 function sns(aws::AWSConfig, action, topic; args...)
 
-    sns(aws, merge(StringDict(args),
+    sns(aws, merge(stringdict(args), Dict(
                    "Action" => action,
                    "Name" => topic,
-                   "TopicArn" => sns_arn(aws, topic)))
+                   "TopicArn" => sns_arn(aws, topic))))
 end
 
 
@@ -77,6 +77,14 @@ function sns_publish(aws::AWSConfig, topic_name, message, subject="No Subject")
         subject = subject[1:100]
     end
     sns(aws, "Publish", topic_name, Message = message, Subject = subject)
+end
+
+
+function send_sms(aws::AWSConfig, number, message)
+
+    sns(aws, Dict("Action" => "Publish",
+                  "PhoneNumber" => number,
+                  "Message" => message))
 end
 
 function sns_subscribe_sqs(aws::AWSConfig, topic_name, queue; raw=false)

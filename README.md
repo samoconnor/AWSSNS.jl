@@ -10,6 +10,8 @@ using AWSSQS
 
 aws = AWSCore.aws_config()
 
+send_sms(aws, "+61123456789", "Hello")
+
 sns_create_topic(aws, "my-topic")
 
 q = sqs_get_queue(aws, "my-queue")
