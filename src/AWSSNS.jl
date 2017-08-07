@@ -26,18 +26,14 @@ using Retry
 sns_arn(aws::AWSConfig, topic_name) = arn(aws, "sns", topic_name)
 
 
-function sns(aws::AWSConfig, query)
-    query["ContentType"] = "JSON"
-    do_request(post_request(aws, "sns", "2010-03-31", query))
-end
+const sns = AWSCore.Services.sns
 
 
-function sns(aws::AWSConfig, action, topic; args...)
+function sns(aws::AWSConfig, action::String, topic::String; args...)
 
-    sns(aws, merge(stringdict(args), Dict(
-                   "Action" => action,
-                   "Name" => topic,
-                   "TopicArn" => sns_arn(aws, topic))))
+    sns(aws, action, merge(stringdict(args),
+                           Dict("Name" => topic,
+                                "TopicArn" => sns_arn(aws, topic))))
 end
 
 
@@ -50,10 +46,9 @@ function sns_list_topics(aws::AWSConfig=default_aws_config())
     l = String[]
     while true
         if isempty(l)
-            r = sns(aws, Dict("Action" => "ListTopics"))
+            r = sns(aws, "ListTopics", [])
         else
-            r = sns(aws, Dict("Action" => "ListTopics",
-                              "NextToken" => r["NextToken"]))
+            r = sns(aws, "ListTopics", ["NextToken" => r["NextToken"]])
         end
         for t in r["Topics"]
             push!(l, String(split(t["TopicArn"],":")[6]))
@@ -117,9 +112,8 @@ Send SMS `message` to `number`.
 
 function send_sms(aws::AWSConfig, number, message)
 
-    sns(aws, Dict("Action" => "Publish",
-                  "PhoneNumber" => number,
-                  "Message" => message))
+    sns(aws, "Publish", ["PhoneNumber" => number,
+                         "Message" => message])
 end
 
 send_sms(number, message) = send_sms(default_aws_config(), number, message)
@@ -133,11 +127,10 @@ Connect SQS `queue` to `topic_name`.
 
 function sns_subscribe_sqs(aws::AWSConfig, topic_name, queue; raw=false)
 
-    r = sns(aws, Dict("Action" => "Subscribe",
-                      "Name" => topic_name,
-                      "TopicArn" => sns_arn(aws, topic_name),
-                      "Endpoint" => arn(aws, "sqs", queue),
-                      "Protocol" => "sqs"))
+    r = sns(aws, "Subscribe", ["Name" => topic_name,
+                               "TopicArn" => sns_arn(aws, topic_name),
+                               "Endpoint" => arn(aws, "sqs", queue),
+                               "Protocol" => "sqs"])
 
     if raw
         sns(aws, "SetSubscriptionAttributes", topic_name,
