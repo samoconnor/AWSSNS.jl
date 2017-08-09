@@ -26,7 +26,7 @@ using Retry
 sns_arn(aws::AWSConfig, topic_name) = arn(aws, "sns", topic_name)
 
 
-const sns = AWSCore.Services.sns
+sns(aws::AWSConfig, action, args) = AWSCore.Services.sns(aws, action, args)
 
 
 function sns(aws::AWSConfig, action::String, topic::String; args...)
