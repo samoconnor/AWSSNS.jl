@@ -130,7 +130,7 @@ function sns_subscribe_sqs(aws::AWSConfig, topic_name, queue; raw=false)
 
     r = sns(aws, "Subscribe", ["Name" => topic_name,
                                "TopicArn" => sns_arn(aws, topic_name),
-                               "Endpoint" => sqs_name(queue),
+                               "Endpoint" => sqs_arn(queue),
                                "Protocol" => "sqs"])
 
     if raw
