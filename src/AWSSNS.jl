@@ -14,12 +14,13 @@ module AWSSNS
 
 export sns_list_topics, sns_delete_topic, sns_create_topic, sns_subscribe_sqs,
        sns_subscribe_email, sns_subscribe_lambda, sns_publish,
-       sns_list_subscriptsion, sns_unsubscribe, send_sms
+       sns_list_subscriptions, sns_unsubscribe, send_sms
 
 
 using AWSCore
 using SymDict
 using Retry
+using AWSSQS
 
 
 
@@ -129,7 +130,7 @@ function sns_subscribe_sqs(aws::AWSConfig, topic_name, queue; raw=false)
 
     r = sns(aws, "Subscribe", ["Name" => topic_name,
                                "TopicArn" => sns_arn(aws, topic_name),
-                               "Endpoint" => arn(aws, "sqs", queue),
+                               "Endpoint" => sqs_arn(queue),
                                "Protocol" => "sqs"])
 
     if raw
@@ -229,18 +230,18 @@ sns_subscribe_lambda(a...) = sns_subscribe_lambda(default_aws_config(), a...)
 
 
 """
-    sns_list_subscriptsion([::AWSConfig], topic_name)
+    sns_list_subscriptions([::AWSConfig], topic_name)
 
 List endpoints that are subscribed to `topic_name`.
 """
 
-function sns_list_subscriptsion(aws::AWSConfig, topic_name)
+function sns_list_subscriptions(aws::AWSConfig, topic_name)
 
     r = sns(aws, "ListSubscriptionsByTopic", topic_name)
     r["Subscriptions"]
 end
 
-sns_list_subscriptsion(a) = sns_list_subscriptsion(default_aws_config(), a)
+sns_list_subscriptions(a) = sns_list_subscriptions(default_aws_config(), a)
 
 
 """
@@ -258,7 +259,7 @@ end
 
 function sns_unsubscribe(aws::AWSConfig, topic_name, pattern::Regex)
 
-    for s in sns_list_subscriptsion(aws, topic_name)
+    for s in sns_list_subscriptions(aws, topic_name)
         if ismatch(pattern, s["Endpoint"])
             sns_unsubscribe(aws, topic_name, s["SubscriptionArn"])
         end
