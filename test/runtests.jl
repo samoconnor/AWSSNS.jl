@@ -59,7 +59,7 @@ test_topic = "ocaws-jl-test-topic-" * lowercase(Dates.format(now(Dates.UTC),
 
 sns_create_topic(aws, test_topic)
 
-sns_subscribe_sqs(aws, test_topic, test_queue; raw = true)
+sns_subscribe_sqs(aws, test_topic, qa; raw = true)
 
 sns_publish(aws, test_topic, "Hello SNS!")
 
