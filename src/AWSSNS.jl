@@ -67,7 +67,6 @@ end
 
 Create a named topic.
 """
-
 function sns_create_topic(aws::AWSConfig, topic_name)
     sns(aws, "CreateTopic", topic_name)
 end
@@ -80,7 +79,6 @@ sns_create_topic(name) = sns_create_topic(default_aws_config(), name)
 
 Delete a named topic.
 """
-
 function sns_delete_topic(aws::AWSConfig, topic_name)
     sns(aws, "DeleteTopic", topic_name)
 end
@@ -93,7 +91,6 @@ sns_delete_topic(name) = sns_delete_topic(default_aws_config(), name)
 
 Send a `message` to a named topic (with optional `subject`).
 """
-
 function sns_publish(aws::AWSConfig, topic_name, message, subject="No Subject")
 
     if length(subject) > 100
@@ -110,7 +107,6 @@ sns_publish(a...) = sns_publish(default_aws_config(), a...)
 
 Send SMS `message` to `number`.
 """
-
 function send_sms(aws::AWSConfig, number, message)
 
     sns(aws, "Publish", ["PhoneNumber" => number,
@@ -125,7 +121,6 @@ send_sms(number, message) = send_sms(default_aws_config(), number, message)
 
 Connect SQS `queue` to `topic_name`.
 """
-
 function sns_subscribe_sqs(aws::AWSConfig, topic_name, queue; raw=false)
 
     r = sns(aws, "Subscribe", ["Name" => topic_name,
@@ -183,7 +178,6 @@ end
 
 Connect `email` to `topic_name`.
 """
-
 function sns_subscribe_email(aws::AWSConfig, topic_name, email)
 
     sns(aws, "Subscribe", topic_name, Endpoint = email, Protocol = "email")
@@ -199,10 +193,9 @@ import AWSLambda: lambda
 
 Connect `lambda_name` to `topic_name`.
 """
-
 function sns_subscribe_lambda(aws::AWSConfig, topic_name, lambda_name)
 
-    if ismatch(r"^arn", lambda_name)
+    if occursin(r"^arn", lambda_name)
         lambda_arn = lambda_name
     else
         lambda_arn = arn(aws, "lambda", "function:$lambda_name")
@@ -234,7 +227,6 @@ sns_subscribe_lambda(a...) = sns_subscribe_lambda(default_aws_config(), a...)
 
 List endpoints that are subscribed to `topic_name`.
 """
-
 function sns_list_subscriptions(aws::AWSConfig, topic_name)
 
     r = sns(aws, "ListSubscriptionsByTopic", topic_name)
@@ -250,7 +242,6 @@ sns_list_subscriptions(a) = sns_list_subscriptions(default_aws_config(), a)
 
 Disconnect `SubscriptionArn` from `topic_name`.
 """
-
 function sns_unsubscribe(aws::AWSConfig, topic_name, SubscriptionArn)
 
     sns(aws, "Unsubscribe", topic_name, SubscriptionArn = SubscriptionArn)
@@ -260,7 +251,7 @@ end
 function sns_unsubscribe(aws::AWSConfig, topic_name, pattern::Regex)
 
     for s in sns_list_subscriptions(aws, topic_name)
-        if ismatch(pattern, s["Endpoint"])
+        if occursin(pattern, s["Endpoint"])
             sns_unsubscribe(aws, topic_name, s["SubscriptionArn"])
         end
     end
