@@ -7,8 +7,10 @@
 
 using AWSSQS
 using AWSSNS
+using AWSCore
 using Retry
-using Base.Test
+using Test
+using Dates
 
 AWSCore.set_debug_level(1)
 
@@ -27,7 +29,7 @@ aws = AWSCore.aws_config(region="ap-southeast-2")
 
 
 for t in sns_list_topics(aws)
-    if ismatch(r"^ocaws-jl-test-topic", t)
+    if occursin(r"^ocaws-jl-test-topic", t)
         sns_delete_topic(aws, t)
     end
 end
